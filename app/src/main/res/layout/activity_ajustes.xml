@@ -1,0 +1,49 @@
+<?xml version="1.0" encoding="utf-8"?>
+<LinearLayout xmlns:android="http://schemas.android.com/apk/res/android"
+    xmlns:app="http://schemas.android.com/apk/res-auto"
+    xmlns:tools="http://schemas.android.com/tools"
+    android:layout_width="match_parent"
+    android:layout_height="match_parent"
+    tools:context=".view.AjustesActivity"
+    android:orientation="vertical">
+
+
+    <TextView
+        android:id="@+id/textView"
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content"
+        android:text="Buscar:" />
+
+    <RadioGroup
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content">
+
+        <RadioButton
+            android:id="@+id/rbCPos"
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:text="desde cualquier posición" />
+
+        <RadioButton
+            android:id="@+id/rbPrincipio"
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:text="desde el principio" />
+    </RadioGroup>
+
+    <Switch
+        android:id="@+id/switchGuardarBusqueda"
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content"
+        android:minHeight="48dp"
+        android:text="Guardar ultima búsqueda" />
+
+    <Button
+        android:id="@+id/btGuardar"
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content"
+        android:layout_marginLeft="40dp"
+        android:layout_marginRight="40dp"
+        android:backgroundTint="#43B62F"
+        android:text="Guardar" />
+</LinearLayout>

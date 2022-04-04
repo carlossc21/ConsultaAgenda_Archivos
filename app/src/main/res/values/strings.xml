@@ -1,0 +1,7 @@
+<resources>
+    <string name="app_name">ConsultaAgenda_Archivos</string>
+
+    <string name="hint_phone">Escriba un numero de telefono</string>
+    <string name="search">Buscar</string>
+    <string name="ajustes">Ajustes</string>
+</resources>
