@@ -1,0 +1,27 @@
+<PreferenceScreen xmlns:android="http://schemas.android.com/apk/res/android"
+    xmlns:app="http://schemas.android.com/apk/res-auto">
+
+    <PreferenceCategory app:title="@string/messages_header">
+
+        <CheckBoxPreference
+            android:defaultValue="false"
+            android:key="buscar1"
+            android:title="Buscar desde el principio" />
+
+        <CheckBoxPreference
+            android:defaultValue="true"
+            android:key="buscar2"
+            android:title="Buscar desde cualquier posición" />
+
+    </PreferenceCategory>
+
+    <PreferenceCategory app:title="@string/sync_header">
+
+        <SwitchPreferenceCompat
+            app:defaultValue="true"
+            app:key="guardarUltimaBusqueda"
+            app:title="@string/sync_title" />
+
+    </PreferenceCategory>
+
+</PreferenceScreen>

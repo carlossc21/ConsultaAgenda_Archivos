@@ -1,4 +1,4 @@
-package es.carlossc212.consultaagenda_archivos.view;
+package es.carlossc212.consultaagenda_archivos.view.old;
 
 import androidx.appcompat.app.AppCompatActivity;
 
@@ -31,7 +31,7 @@ public class AjustesActivity extends AppCompatActivity {
 
         int formaBusqueda = sh.getInt("formaBusqueda", 0); //0 cualquier posición - 1 desde el principio
         int guardarBusqueda = sh.getInt("guardarBusqueda", 1); //0 no guardar - 1 guardar
-        String ultimaBusqueda = sh .getString("ultimaBusqueda", "");
+        String ultimaBusqueda = sh.getString("ultimaBusqueda", "");
 
 
         if (formaBusqueda == 0) {

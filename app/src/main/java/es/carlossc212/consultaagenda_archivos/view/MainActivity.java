@@ -4,9 +4,7 @@ import androidx.annotation.NonNull;
 import androidx.annotation.RequiresApi;
 import androidx.appcompat.app.AlertDialog;
 import androidx.appcompat.app.AppCompatActivity;
-import androidx.constraintlayout.widget.ConstraintLayout;
 import androidx.core.content.ContextCompat;
-import androidx.lifecycle.LiveData;
 
 import android.Manifest;
 import android.content.DialogInterface;
@@ -19,7 +17,6 @@ import android.os.Build;
 import android.os.Bundle;
 import android.preference.PreferenceManager;
 import android.provider.ContactsContract;
-import android.provider.UserDictionary;
 import android.util.Log;
 import android.view.Menu;
 import android.view.MenuItem;
@@ -31,53 +28,47 @@ import android.widget.TextView;
 import java.io.BufferedWriter;
 import java.io.File;
 import java.io.FileNotFoundException;
-import java.io.FileOutputStream;
 import java.io.FileWriter;
 import java.io.IOException;
-import java.io.OutputStreamWriter;
-import java.text.DateFormat;
 import java.text.SimpleDateFormat;
 import java.util.Calendar;
 
 import es.carlossc212.consultaagenda_archivos.R;
-import es.carlossc212.consultaagenda_archivos.model.Repository;
+import es.carlossc212.consultaagenda_archivos.viewmodel.ContactsViewModel;
 
 public class MainActivity extends AppCompatActivity {
 
-    private Button BtSearch;
-    private EditText ETPhone;
+    private final static int PERMISSION_CONTACTS = 1;
+
+    private Button btSearch;
+    private EditText etPhone;
     private TextView tvResult, tvUltimaBusqueda;
-    private final int PERMISSION_CONTACTS = 1;
-    Repository rep;
 
-    SharedPreferences sh;
-    SharedPreferences.Editor editor;
-    int modoBusqueda;
-    int guardarBusqueda;
+    //Repository rep;
 
-
+    private SharedPreferences sh;
+    private SharedPreferences.Editor editor;
+    private int modoBusqueda;
+    private int guardarBusqueda;
+    private boolean busquedaPrincipio;
+    private boolean guardarUltimaBusqueda;
+    private String ultimaBusqueda = "";
+    private ContactsViewModel cvm;
 
     @Override
     protected void onCreate(Bundle savedInstanceState) {
         super.onCreate(savedInstanceState);
         setContentView(R.layout.activity_main);
-
-        rep = new Repository();
-
+        //rep = new Repository();
         initialize();
-        sh = PreferenceManager.getDefaultSharedPreferences(this);
-        editor = sh.edit();
-        modoBusqueda = sh.getInt("formaBusqueda", 0);
-        guardarBusqueda = sh.getInt("guardarBusqueda", 1);
-
     }
 
-    @Override
+    /*@Override
     protected void onResume() {
         super.onResume();
         modoBusqueda = sh.getInt("formaBusqueda", 0);
         guardarBusqueda = sh.getInt("guardarBusqueda", 1);
-    }
+    }*/
 
     @Override
     public void onRequestPermissionsResult(int requestCode, @NonNull String[] permissions, @NonNull int[] grantResults) {
@@ -87,7 +78,8 @@ public class MainActivity extends AppCompatActivity {
             case PERMISSION_CONTACTS:
                 if (grantResults[0] == PackageManager.PERMISSION_GRANTED && grantResults.length >0){
                     //permiso
-                    rep.search(getContentResolver(), ETPhone.getText().toString());
+                    //rep.search(getContentResolver(), ETPhone.getText().toString());
+                    tvResult.setText(cvm.search(etPhone.getText().toString()));
                 }else{
                     //sin permiso
                 }
@@ -99,113 +91,76 @@ public class MainActivity extends AppCompatActivity {
 
     //Mensaje de explicacion de los permisos
     private void explain() {
-        showRationaleDialog("Permisos requeridos", "Para que esta app funcione se necesita acceder a los contactos", Manifest.permission.READ_CONTACTS, PERMISSION_CONTACTS);
+        showRationaleDialog("Permisos requeridos", "Para que esta app funcione se necesita acceder a los contactos");
     }
     //Se inicializan los componentes
     private void initialize() {
 
-        BtSearch = findViewById(R.id.BtSearch);
-        ETPhone = findViewById(R.id.ETPhone);
+        btSearch = findViewById(R.id.BtSearch);
+        etPhone = findViewById(R.id.ETPhone);
         tvResult = findViewById(R.id.tvResult);
         tvUltimaBusqueda = findViewById(R.id.tvUltimaBusqueda);
+        cvm = new ContactsViewModel(getApplication());
+
         tvUltimaBusqueda.setOnClickListener(v->{
-            ETPhone.setText(tvUltimaBusqueda.getText().toString());
+            etPhone.setText(tvUltimaBusqueda.getText().toString());
         });
 
-        ETPhone.setOnFocusChangeListener((v, hasFocus) -> {
-            if (guardarBusqueda == 1) {
+        etPhone.setOnFocusChangeListener((v, hasFocus) -> {
+            if (guardarUltimaBusqueda) {
                 if (hasFocus) {
                     tvUltimaBusqueda.setVisibility(View.VISIBLE);
                     tvUltimaBusqueda.setText(sh.getString("ultimaBusqueda", ""));
-                }else{
+                } else {
                     tvUltimaBusqueda.setVisibility(View.GONE);
                 }
             }
         });
 
 
-        BtSearch.setOnClickListener(view -> {
-            ETPhone.clearFocus();
+        btSearch.setOnClickListener(view -> {
+            etPhone.clearFocus();
             searchIfPermitted();
-
+            editor.putString("ultimaBusqueda", etPhone.getText().toString());
+            editor.apply();
+            cvm.guardarBusquedaCsv(etPhone.getText().toString());
         });
+
+        sh = PreferenceManager.getDefaultSharedPreferences(this);
+        editor = sh.edit();
+        busquedaPrincipio = cvm.getBusquedaPrincipio();
+        guardarUltimaBusqueda = cvm.guardarBusqueda();
+        if(guardarUltimaBusqueda) {
+            ultimaBusqueda = cvm.getUltimaBusqueda();
+        }
     }
+
     //Pedir permisos
     @RequiresApi(api = Build.VERSION_CODES.M)
     private void requestPermission() {
         requestPermissions(new String[]{Manifest.permission.READ_CONTACTS},PERMISSION_CONTACTS);
     }
-    //Buscar
-    private void search() {
-        guardarBusquedaCsv();
-
-        editor.putString("ultimaBusqueda", ETPhone.getText().toString());
-        editor.apply();
-        Uri uri = ContactsContract.CommonDataKinds.Phone.CONTENT_URI;
-        String proyeccion[] = new String[]{ContactsContract.CommonDataKinds.Phone.NUMBER, ContactsContract.CommonDataKinds.Phone.DISPLAY_NAME};
-        String seleccion = ContactsContract.Contacts.IN_VISIBLE_GROUP + " = ? and " +
-                ContactsContract.Contacts.HAS_PHONE_NUMBER + "= ?";
-        String argumentos[] = new String[]{"1","1"};
-        seleccion = null;
-        argumentos = null;
-        String orden = ContactsContract.Contacts.DISPLAY_NAME;
-        Cursor cursor = getContentResolver().query(uri, proyeccion, seleccion, argumentos, orden);
 
 
-        String displayname;
-
-
-        int columnaNombre = cursor.getColumnIndex(ContactsContract.CommonDataKinds.Phone.DISPLAY_NAME);
-        int columnaNumero = cursor.getColumnIndex(ContactsContract.CommonDataKinds.Phone.NUMBER);
-
-        String contactos = "";
-
-        while (cursor.moveToNext()){
-
-            displayname = cursor.getString(columnaNombre);
-            System.out.println(displayname);
-
-            switch(modoBusqueda) {
-                case 0:
-                    if (cursor.getString(columnaNumero).contains(ETPhone.getText().toString())) {
-                        contactos = contactos + displayname + "\n";
-                    }
-                    break;
-
-                case 1:
-                    if (cursor.getString(columnaNumero).startsWith(ETPhone.getText().toString())) {
-                        contactos = contactos + displayname + "\n";
-                    }
-                    break;
-            }
-        }
-        tvResult.setText(contactos);
-
-
-
-        //SharedPreferences sharedPreferences = PreferenceManager.getDefaultSharedPreferences(this);
-        //String email = sharedPreferences.getString("email", "no existe");
-    }
     // Buscar si esta permitido
     private void searchIfPermitted() {
         if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.M) {
             //La version de android es posterior a la 6 (incluida)
             if (ContextCompat.checkSelfPermission(this, Manifest.permission.READ_CONTACTS) == PackageManager.PERMISSION_GRANTED) {
                 //Ya tengo el permiso
-                search();
+                tvResult.setText(cvm.search(etPhone.getText().toString()));
             } else if (shouldShowRequestPermissionRationale(Manifest.permission.READ_CONTACTS)) {
                 explain();
-
             } else {
                 requestPermission();
             }
         } else { //La version de android es anterior a la 6
             //Ya tengo el permiso
-            search();
+            tvResult.setText(cvm.search(etPhone.getText().toString()));
         }
     }
 
-    private void showRationaleDialog (String title, String message, String permission, int requestCode) {
+    private void showRationaleDialog (String title, String message) {
         AlertDialog.Builder builder = new AlertDialog.Builder(this);
         builder.setTitle(title).setMessage(message).setNegativeButton("Cancel", new DialogInterface.OnClickListener() {
             @Override
@@ -235,37 +190,13 @@ public class MainActivity extends AppCompatActivity {
     public boolean onOptionsItemSelected(@NonNull MenuItem item) {
         switch (item.getItemId()) {
             case R.id.ajustes:
-                Intent i = new Intent(this, AjustesActivity.class);
+                //Intent i = new Intent(this, AjustesActivity.class);
+                Intent i = new Intent(this, SettingsActivity.class);
                 startActivity(i);
                 return true;
         }
         return super.onOptionsItemSelected(item);
     }
 
-    private void guardarBusquedaCsv(){
-        File f = new File(getExternalFilesDir(null), "busquedas.csv");
 
-        try {
-            BufferedWriter bfw = new BufferedWriter(new FileWriter(f, true));
-
-
-            //busqueda;dd/mm/aa-00:00
-            Calendar c = Calendar.getInstance();
-            SimpleDateFormat formatter = new SimpleDateFormat("dd/MM/yyyy-HH:mm:ss");
-            String fecha = formatter.format(c.getTime());
-            //System.out.println(fecha);
-
-            String csv = ETPhone.getText().toString()+";"+fecha+"\n";
-            bfw.write(csv);
-            bfw.flush();
-
-            System.out.println("escrito");
-
-        } catch (FileNotFoundException e) {
-            System.out.println("Hoal");
-        } catch (IOException e) {
-            System.out.println("Hola");
-        }
-
-    }
 }
